@@ -1,4 +1,5 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import StreamingResponse, JSONResponse
 from rembg import remove
 from PIL import Image
 from io import BytesIO
@@ -6,29 +7,33 @@ import base64
 
 app = FastAPI()
 
-def image_to_base64(img):
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    return base64.b64encode(buffer.read()).decode("utf-8")
-
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.post("/remove-single")
-async def remove_single_api(file: UploadFile = File(...)):
-    img = Image.open(BytesIO(await file.read()))
-    out = remove(img)
+async def remove_single(file: UploadFile = File(...)):
+    image_bytes = await file.read()
+    result = remove(image_bytes)
 
-    base64_image = image_to_base64(out)
-    return {"image_base64": base64_image}
+    output = BytesIO(result)
+    output.seek(0)
 
+    return StreamingResponse(
+        output,
+        media_type="image/png",
+        headers={"Content-Disposition": 'attachment; filename="no_bg.png"'}
+    )
 
 @app.post("/remove-batch")
-async def remove_batch_api(files: list[UploadFile] = File(...)):
-    base64_images = []
+async def remove_batch(files: list[UploadFile] = File(...)):
+    result_list = []
 
     for file in files:
-        img = Image.open(BytesIO(await file.read()))
-        out = remove(img)
-        base64_images.append(image_to_base64(out))
+        image_bytes = await file.read()
+        result = remove(image_bytes)
 
-    return {"images": base64_images}
+        encoded = base64.b64encode(result).decode("utf-8")
+        result_list.append(encoded)
+
+    return JSONResponse(content={"images": result_list})
