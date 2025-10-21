@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+rembg
+onnxruntime-cpu
+pillow
+python-multipart
