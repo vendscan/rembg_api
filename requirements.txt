@@ -1,6 +1,6 @@
 fastapi
 uvicorn
 rembg
-onnxruntime-cpu
+onnxruntime==1.16.3
 pillow
 python-multipart
